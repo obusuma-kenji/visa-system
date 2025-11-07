@@ -1,9 +1,9 @@
 """
 AI統合モジュール - Claude APIを使用した高度な判定
-Version 1.1 - Fixed proxies parameter issue
 """
 import json
 from typing import Dict, Any, Optional
+import re # 正規表現モジュールを追加
 
 
 class VisaAIAnalyzer:
@@ -16,10 +16,10 @@ class VisaAIAnalyzer:
         初期化
         
         Args:
-            api_key: Anthropic APIキー(Noneの場合はAI機能なしで動作)
+            api_key: Anthropic APIキー（Noneの場合はAI機能なしで動作）
         """
         self.api_key = api_key
-        self.client = None  # ← 最初に必ず定義
+        self.client = None
         
         if api_key:
             try:
@@ -27,31 +27,25 @@ class VisaAIAnalyzer:
                 self.client = anthropic.Anthropic(api_key=api_key)
             except ImportError:
                 print("警告: anthropicパッケージがインストールされていません")
-                self.client = None
             except Exception as e:
                 print(f"警告: Claude APIの初期化に失敗しました: {e}")
-                self.client = None
     
     def is_available(self) -> bool:
         """AI機能が利用可能かチェック"""
         return self.client is not None
+
+    def _extract_json(self, text: str) -> str:
+        """Markdownで囲まれたJSONコードブロックからJSON文字列を抽出する"""
+        # 正規表現で ````json ... ``` ` の内容を抽出
+        match = re.search(r"```json\s*(\{[\s\S]*?\})\s*```", text)
+        if match:
+            return match.group(1)
+        # Markdownコードブロックで囲まれていない場合
+        return text.strip()
     
     def analyze_major_relevance(self, major: str, job_field: str, job_description: str = "") -> Dict[str, Any]:
         """
         専攻と職種の関連性をAIで分析
-        
-        Args:
-            major: 専攻（例: 情報工学）
-            job_field: 職種（例: システムエンジニア）
-            job_description: 業務内容（オプション）
-        
-        Returns:
-            {
-                'score': int (0-100),
-                'level': str (高い/中程度/低い),
-                'reason': str,
-                'recommendation': str
-            }
         """
         if not self.is_available():
             return {
@@ -65,7 +59,7 @@ class VisaAIAnalyzer:
             job_info = f"\n職務内容: {job_description}" if job_description else ""
             
             prompt = f"""あなたは日本の在留資格審査の専門家です。
-以下の専攻と職種の関連性を評価してください。
+以下の専攻と職種の関連性を評価してください。回答は必ずJSONブロック内で行ってください。
 
 専攻: {major}
 職種: {job_field}{job_info}
@@ -83,16 +77,27 @@ class VisaAIAnalyzer:
     "reason": "<関連性の理由を1-2文で>",
     "recommendation": "<在留資格申請に関するアドバイス>"
 }}"""
-
+            
+            # モデル名はお客様のアカウントで動作確認できたものを使用
             message = self.client.messages.create(
                 model="claude-sonnet-4-20250514",
                 max_tokens=1024,
                 messages=[{"role": "user", "content": prompt}]
             )
             
-            # レスポンスのパース
+            # レスポンスのパース (JSONパースエラー対応を強化)
             response_text = message.content[0].text
-            result = json.loads(response_text)
+            
+            # ★ 修正箇所: Markdownラッパーを除去 ★
+            clean_json_text = self._extract_json(response_text)
+            
+            try:
+                result = json.loads(clean_json_text)
+            except json.JSONDecodeError:
+                print("\n--- [DEBUG] Raw AI Response Text (Analyze Major Relevance) ---")
+                print(response_text)
+                print("---------------------------------------------------------------")
+                raise Exception("AIからの応答が有効なJSON形式ではありませんでした。生の応答を確認してください。")
             
             return result
             
@@ -108,19 +113,6 @@ class VisaAIAnalyzer:
     def analyze_job_description(self, job_description: str, visa_type: str = "技術・人文知識・国際業務") -> Dict[str, Any]:
         """
         業務内容を分析し、単純労働でないかを判定
-        
-        Args:
-            job_description: 業務内容の説明
-            visa_type: 対象の在留資格
-        
-        Returns:
-            {
-                'is_suitable': bool,
-                'professional_score': int (0-100),
-                'concerns': list,
-                'strengths': list,
-                'recommendations': list
-            }
         """
         if not self.is_available():
             return {
@@ -133,7 +125,7 @@ class VisaAIAnalyzer:
         
         try:
             prompt = f"""あなたは日本の在留資格審査の専門家です。
-以下の業務内容が在留資格「{visa_type}」に該当するか分析してください。
+以下の業務内容が在留資格「{visa_type}」に該当するか分析してください。回答は必ずJSONブロック内で行ってください。
 
 業務内容:
 {job_description}
@@ -152,6 +144,7 @@ class VisaAIAnalyzer:
     "recommendations": [<改善提案のリスト>]
 }}"""
 
+            # モデル名はお客様のアカウントで動作確認できたものを使用
             message = self.client.messages.create(
                 model="claude-sonnet-4-20250514",
                 max_tokens=1024,
@@ -159,8 +152,18 @@ class VisaAIAnalyzer:
             )
             
             response_text = message.content[0].text
-            result = json.loads(response_text)
             
+            # ★ 修正箇所: Markdownラッパーを除去 ★
+            clean_json_text = self._extract_json(response_text)
+
+            try:
+                result = json.loads(clean_json_text)
+            except json.JSONDecodeError:
+                print("\n--- [DEBUG] Raw AI Response Text (Analyze Job Description) ---")
+                print(response_text)
+                print("-------------------------------------------------------------")
+                raise Exception("AIからの応答が有効なJSON形式ではありませんでした。生の応答を確認してください。")
+
             return result
             
         except Exception as e:
@@ -176,13 +179,6 @@ class VisaAIAnalyzer:
     def generate_improvement_suggestions(self, applicant_data: Dict[str, Any], diagnosis_result: Dict[str, Any]) -> str:
         """
         診断結果に基づいて改善提案を生成
-        
-        Args:
-            applicant_data: 申請者情報
-            diagnosis_result: 診断結果
-        
-        Returns:
-            改善提案のテキスト
         """
         if not self.is_available():
             return "AI機能が無効のため、改善提案を生成できません。"
@@ -211,7 +207,8 @@ class VisaAIAnalyzer:
 
 これらの不足要件を満たすための具体的で実行可能な改善提案を3-5個、箇条書きで提案してください。
 各提案は「・」で始めてください。"""
-
+            
+            # モデル名はお客様のアカウントで動作確認できたものを使用
             message = self.client.messages.create(
                 model="claude-sonnet-4-20250514",
                 max_tokens=1024,
@@ -228,6 +225,8 @@ class VisaAIAnalyzer:
 # 簡易的なテスト用関数
 def test_ai_integration(api_key: str):
     """AI統合のテスト"""
+    import sys
+    
     analyzer = VisaAIAnalyzer(api_key)
     
     if not analyzer.is_available():
@@ -238,18 +237,26 @@ def test_ai_integration(api_key: str):
     
     # テスト1: 専攻と職種の関連性
     print("\n【テスト1】専攻と職種の関連性分析")
-    result = analyzer.analyze_major_relevance("情報工学", "システムエンジニア")
-    print(f"スコア: {result['score']}点")
-    print(f"レベル: {result['level']}")
-    print(f"理由: {result['reason']}")
-    
+    try:
+        result = analyzer.analyze_major_relevance("情報工学", "システムエンジニア")
+        print(f"スコア: {result.get('score', 'N/A')}点")
+        print(f"レベル: {result.get('level', 'N/A')}")
+        print(f"理由: {result.get('reason', 'N/A')}")
+    except Exception as e:
+        print(f"⚠️ テスト1 実行中に致命的なエラーが発生: {e}")
+        return
+
     # テスト2: 業務内容の分析
     print("\n【テスト2】業務内容の分析")
     job_desc = "顧客の要望をヒアリングし、Webシステムの設計・開発を行う。要件定義から実装、テストまで担当。"
-    result = analyzer.analyze_job_description(job_desc)
-    print(f"適合: {result['is_suitable']}")
-    print(f"専門性スコア: {result['professional_score']}点")
-    print(f"強み: {', '.join(result['strengths'][:2])}")
+    try:
+        result = analyzer.analyze_job_description(job_desc)
+        print(f"適合: {result.get('is_suitable', 'N/A')}")
+        print(f"専門性スコア: {result.get('professional_score', 'N/A')}点")
+        print(f"強み: {', '.join(result.get('strengths', ['N/A'])[:2])}")
+    except Exception as e:
+        print(f"⚠️ テスト2 実行中に致命的なエラーが発生: {e}")
+        return
     
     print("\n✅ テスト完了")
 
