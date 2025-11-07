@@ -1,5 +1,6 @@
 """
 AI統合モジュール - Claude APIを使用した高度な判定
+Version 1.1 - Fixed proxies parameter issue
 """
 import json
 from typing import Dict, Any, Optional
