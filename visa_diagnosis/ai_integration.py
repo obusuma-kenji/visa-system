@@ -18,7 +18,6 @@ class VisaAIAnalyzer:
             api_key: Anthropic APIキー（Noneの場合はAI機能なしで動作）
         """
         self.api_key = api_key
-        self.client = None
         
         if api_key:
             try:
