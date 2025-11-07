@@ -15,9 +15,10 @@ class VisaAIAnalyzer:
         初期化
         
         Args:
-            api_key: Anthropic APIキー（Noneの場合はAI機能なしで動作）
+            api_key: Anthropic APIキー(Noneの場合はAI機能なしで動作)
         """
         self.api_key = api_key
+        self.client = None  # ← 最初に必ず定義
         
         if api_key:
             try:
@@ -25,8 +26,10 @@ class VisaAIAnalyzer:
                 self.client = anthropic.Anthropic(api_key=api_key)
             except ImportError:
                 print("警告: anthropicパッケージがインストールされていません")
+                self.client = None
             except Exception as e:
                 print(f"警告: Claude APIの初期化に失敗しました: {e}")
+                self.client = None
     
     def is_available(self) -> bool:
         """AI機能が利用可能かチェック"""
