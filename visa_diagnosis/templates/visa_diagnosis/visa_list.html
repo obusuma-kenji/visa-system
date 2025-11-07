@@ -1,0 +1,106 @@
+{% extends 'visa_diagnosis/base.html' %}
+
+{% block title %}在留資格一覧{% endblock %}
+
+{% block extra_css %}
+<style>
+    .visa-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-left: 5px solid #667eea;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .visa-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    }
+    
+    .visa-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+    
+    .badge-work {
+        background: #bee3f8;
+        color: #2c5282;
+    }
+    
+    .badge-specified {
+        background: #fbd38d;
+        color: #7c2d12;
+    }
+    
+    .badge-activity {
+        background: #c6f6d5;
+        color: #22543d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 style="color: #667eea; margin-bottom: 1rem;">📋 在留資格一覧</h2>
+    <p style="margin-bottom: 2rem;">
+        日本で就労可能な主要な在留資格の一覧です。各在留資格の要件と特徴を確認できます。
+    </p>
+</div>
+
+{% for visa in visas %}
+<div class="visa-card">
+    <div style="margin-bottom: 1rem;">
+        <h3 style="color: #2d3748; display: inline-block;">
+            {{ visa.name_ja }}
+        </h3>
+        <span class="visa-badge {% if visa.category_type == 'work' %}badge-work{% elif visa.category_type == 'specified' %}badge-specified{% else %}badge-activity{% endif %}">
+            {{ visa.get_category_type_display }}
+        </span>
+    </div>
+    
+    <p style="color: #718096; margin-bottom: 0.5rem;">
+        <strong>English:</strong> {{ visa.name_en }}
+    </p>
+    
+    <p style="margin-bottom: 1rem;">
+        {{ visa.description }}
+    </p>
+    
+    {% if visa.requirements.all %}
+    <details style="margin-top: 1rem;">
+        <summary style="cursor: pointer; color: #667eea; font-weight: 600;">
+            📌 要件を見る（{{ visa.requirements.count }}項目）
+        </summary>
+        <div style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 5px;">
+            {% for req in visa.requirements.all %}
+            <div style="margin-bottom: 0.75rem; padding: 0.75rem; background: white; border-radius: 5px;">
+                <strong style="color: #2d3748;">
+                    {{ req.get_requirement_type_display }}
+                    {% if req.is_mandatory %}<span style="color: #e53e3e;">（必須）</span>{% else %}<span style="color: #718096;">（推奨）</span>{% endif %}
+                </strong>
+                <p style="margin-top: 0.25rem;">{{ req.condition }}</p>
+                {% if req.alternative_condition %}
+                <p style="margin-top: 0.25rem; color: #718096; font-size: 0.9rem;">
+                    <strong>代替条件:</strong> {{ req.alternative_condition }}
+                </p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </details>
+    {% endif %}
+</div>
+{% endfor %}
+
+<div style="text-align: center; margin-top: 2rem;">
+    <a href="{% url 'visa_diagnosis:diagnosis_form' %}" class="btn">
+        🔍 診断を開始する
+    </a>
+</div>
+{% endblock %}

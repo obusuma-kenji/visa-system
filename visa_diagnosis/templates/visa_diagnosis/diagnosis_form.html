@@ -1,0 +1,184 @@
+{% extends 'visa_diagnosis/base.html' %}
+
+{% block title %}在留資格診断フォーム{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #2d3748;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #cbd5e0;
+        border-radius: 5px;
+        font-size: 1rem;
+        transition: border-color 0.3s;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .form-group small {
+        display: block;
+        margin-top: 0.25rem;
+        color: #718096;
+    }
+    
+    .form-section {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+    
+    .form-section h3 {
+        color: #667eea;
+        margin-bottom: 1rem;
+        font-size: 1.3rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 style="color: #667eea; margin-bottom: 1.5rem;">在留資格診断フォーム</h2>
+    <p style="margin-bottom: 2rem;">採用予定の外国人材の情報を入力してください。最適な在留資格を診断します。</p>
+    
+    <form method="POST" action="{% url 'visa_diagnosis:submit_diagnosis' %}">
+        {% csrf_token %}
+        
+        <div class="form-section">
+            <h3>📝 基本情報</h3>
+            
+            <div class="form-group">
+                <label for="nationality">国籍 <span style="color: #e53e3e;">*</span></label>
+                <input type="text" id="nationality" name="nationality" required placeholder="例: ベトナム">
+                <small>採用予定者の国籍を入力してください</small>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h3>🎓 学歴情報</h3>
+            
+            <div class="form-group">
+                <label for="degree">最終学歴 <span style="color: #e53e3e;">*</span></label>
+                <select id="degree" name="degree" required>
+                    <option value="">選択してください</option>
+                    <option value="博士">博士</option>
+                    <option value="修士">修士</option>
+                    <option value="学士">学士（大学卒業）</option>
+                    <option value="専門学校">専門学校</option>
+                    <option value="短期大学">短期大学</option>
+                    <option value="高等学校">高等学校</option>
+                    <option value="その他">その他</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="major">専攻</label>
+                <input type="text" id="major" name="major" placeholder="例: 情報工学、経営学、日本語学">
+                <small>専攻分野を入力してください</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="university">大学名・学校名</label>
+                <input type="text" id="university" name="university" placeholder="例: ○○大学">
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h3>💼 実務経験</h3>
+            
+            <div class="form-group">
+                <label for="experience_years">実務経験年数</label>
+                <input type="number" id="experience_years" name="experience_years" min="0" max="50" placeholder="0">
+                <small>関連分野での実務経験年数を入力してください</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="experience_field">経験分野</label>
+                <input type="text" id="experience_field" name="experience_field" placeholder="例: ソフトウェア開発、営業、通訳">
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h3>🏢 職務内容</h3>
+            
+            <div class="form-group">
+                <label for="industry">業種 <span style="color: #e53e3e;">*</span></label>
+                <select id="industry" name="industry" required>
+                    <option value="">選択してください</option>
+                    <option value="IT・ソフトウェア">IT・ソフトウェア</option>
+                    <option value="製造業">製造業</option>
+                    <option value="商社・貿易">商社・貿易</option>
+                    <option value="飲食業">飲食業</option>
+                    <option value="建設業">建設業</option>
+                    <option value="介護">介護</option>
+                    <option value="宿泊業">宿泊業</option>
+                    <option value="農業">農業</option>
+                    <option value="サービス業">サービス業</option>
+                    <option value="その他">その他</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="position">職種 <span style="color: #e53e3e;">*</span></label>
+                <input type="text" id="position" name="position" required placeholder="例: システムエンジニア、通訳、調理師">
+                <small>採用予定のポジションを入力してください</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="duties">具体的な業務内容</label>
+                <textarea id="duties" name="duties" rows="4" placeholder="具体的な業務内容を記載してください（例: Webシステムの設計・開発、顧客との英語での商談、調理業務全般）"></textarea>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h3>💰 雇用条件</h3>
+            
+            <div class="form-group">
+                <label for="salary">月額報酬（円） <span style="color: #e53e3e;">*</span></label>
+                <input type="number" id="salary" name="salary" required min="0" step="10000" placeholder="250000">
+                <small>月額の基本給を入力してください</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="company_name">企業名</label>
+                <input type="text" id="company_name" name="company_name" placeholder="株式会社○○">
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h3>📜 保有資格</h3>
+            
+            <div class="form-group">
+                <label for="qualifications">保有資格（カンマ区切り）</label>
+                <input type="text" id="qualifications" name="qualifications" placeholder="例: 日本語能力試験N2, 情報処理技術者試験">
+                <small>複数の資格がある場合はカンマで区切って入力してください</small>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 2rem;">
+            <button type="submit" class="btn" style="font-size: 1.1rem; padding: 1rem 3rem;">
+                🔍 診断する
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

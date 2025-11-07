@@ -1,0 +1,47 @@
+{% extends 'visa_diagnosis/base.html' %}
+
+{% block content %}
+<div class="card">
+    <h2 style="color: #667eea; margin-bottom: 1rem;">外国人雇用の在留資格を診断します</h2>
+    <p style="font-size: 1.1rem; margin-bottom: 2rem;">
+        採用したい外国人の学歴・経験・職務内容から、最適な在留資格を自動判定します。<br>
+        社会保険労務士監修のロジックで、高精度な診断が可能です。
+    </p>
+    
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <a href="{% url 'visa_diagnosis:diagnosis_form' %}" class="btn">
+            🔍 診断を開始する
+        </a>
+        <a href="{% url 'visa_diagnosis:visa_list' %}" class="btn btn-secondary">
+            📋 在留資格一覧を見る
+        </a>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+    <div class="card">
+        <h3 style="color: #667eea; margin-bottom: 0.5rem;">✅ 要件チェック</h3>
+        <p>学歴、実務経験、報酬など、在留資格の要件を自動でチェックします。</p>
+    </div>
+    
+    <div class="card">
+        <h3 style="color: #667eea; margin-bottom: 0.5rem;">📊 適合度判定</h3>
+        <p>複数の在留資格候補をスコアリングし、最適なものを推奨します。</p>
+    </div>
+    
+    <div class="card">
+        <h3 style="color: #667eea; margin-bottom: 0.5rem;">📄 必要書類リスト</h3>
+        <p>申請に必要な書類を自動で一覧化し、準備をサポートします。</p>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 2rem; background: #f8f9fa;">
+    <h3 style="margin-bottom: 1rem;">システムの特徴</h3>
+    <ul style="list-style-position: inside; line-height: 2;">
+        <li><strong>社労士監修:</strong> 実務経験に基づく正確な判定ロジック</li>
+        <li><strong>業種別対応:</strong> IT、製造、介護、飲食など幅広い業種に対応</li>
+        <li><strong>最新情報:</strong> 法改正に対応した最新の要件データベース</li>
+        <li><strong>即座に結果:</strong> 入力後すぐに診断結果を表示</li>
+    </ul>
+</div>
+{% endblock %}

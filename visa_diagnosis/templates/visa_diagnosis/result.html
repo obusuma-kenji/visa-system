@@ -1,0 +1,303 @@
+{% extends 'visa_diagnosis/base.html' %}
+
+{% block title %}診断結果{% endblock %}
+
+{% block extra_css %}
+<style>
+    .result-summary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+    
+    .visa-recommendation {
+        border: 2px solid #667eea;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        background: white;
+    }
+    
+    .visa-recommendation.top {
+        background: linear-gradient(to right, #f0f4ff 0%, #ffffff 100%);
+        border-width: 3px;
+    }
+    
+    .score-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        margin-left: 1rem;
+    }
+    
+    .score-high {
+        background: #48bb78;
+        color: white;
+    }
+    
+    .score-medium {
+        background: #ed8936;
+        color: white;
+    }
+    
+    .score-low {
+        background: #e53e3e;
+        color: white;
+    }
+    
+    .requirement-item {
+        padding: 0.75rem;
+        margin: 0.5rem 0;
+        border-radius: 5px;
+        display: flex;
+        align-items: start;
+    }
+    
+    .requirement-item.met {
+        background: #f0fff4;
+        border-left: 4px solid #48bb78;
+    }
+    
+    .requirement-item.not-met {
+        background: #fff5f5;
+        border-left: 4px solid #e53e3e;
+    }
+    
+    .requirement-item.recommended {
+        background: #fffaf0;
+        border-left: 4px solid #ed8936;
+    }
+    
+    .document-list {
+        list-style: none;
+        padding: 0;
+    }
+    
+    .document-list li {
+        padding: 0.75rem;
+        margin: 0.5rem 0;
+        background: #f8f9fa;
+        border-radius: 5px;
+        border-left: 3px solid #667eea;
+    }
+    
+    .next-steps {
+        background: #fffaf0;
+        padding: 1.5rem;
+        border-radius: 8px;
+        border: 2px solid #ed8936;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="result-summary">
+    <h2 style="margin-bottom: 1rem;">📊 診断結果</h2>
+    <p style="font-size: 1.2rem; margin-bottom: 0.5rem;">
+        <strong>診断ID:</strong> {{ session_id }}
+    </p>
+    <p style="font-size: 1.1rem;">
+        {{ result.analysis_summary }}
+    </p>
+</div>
+
+<div class="card">
+    <h3 style="color: #667eea; margin-bottom: 1rem;">👤 申請者情報サマリー</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <div>
+            <strong>国籍:</strong> {{ result.applicant_summary.nationality }}
+        </div>
+        <div>
+            <strong>学歴:</strong> {{ result.applicant_summary.education }}
+        </div>
+        <div>
+            <strong>実務経験:</strong> {{ result.applicant_summary.experience_years }}年
+        </div>
+        <div>
+            <strong>職種:</strong> {{ result.applicant_summary.target_job }}
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="color: #667eea; margin-bottom: 1.5rem;">🎯 推奨在留資格</h3>
+    
+    {% for recommendation in result.top_recommendations %}
+    <div class="visa-recommendation {% if forloop.first %}top{% endif %}">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div>
+                <h4 style="font-size: 1.3rem; color: #2d3748;">
+                    {% if forloop.first %}🥇{% elif forloop.counter == 2 %}🥈{% elif forloop.counter == 3 %}🥉{% endif %}
+                    {{ recommendation.visa_category.name_ja }}
+                </h4>
+                <p style="color: #718096; margin-top: 0.25rem;">
+                    {{ recommendation.visa_category.name_en }}
+                </p>
+            </div>
+            <div>
+                <span class="score-badge {% if recommendation.match_score >= 70 %}score-high{% elif recommendation.match_score >= 50 %}score-medium{% else %}score-low{% endif %}">
+                    {{ recommendation.match_score }}点
+                </span>
+            </div>
+        </div>
+        
+        <p style="margin-bottom: 1rem;">
+            <strong>推奨度:</strong> {{ recommendation.recommendation_level }} |
+            <strong>許可見込み:</strong> {{ recommendation.approval_probability }}
+        </p>
+        
+        <div style="margin-top: 1.5rem;">
+            <h5 style="margin-bottom: 0.75rem; color: #2d3748;">要件チェック結果</h5>
+            {% for req in recommendation.requirements_status %}
+            <div class="requirement-item {% if '✓' in req.status %}met{% elif '✗' in req.status %}not-met{% else %}recommended{% endif %}">
+                <span style="margin-right: 0.5rem; font-size: 1.2rem;">
+                    {% if '✓' in req.status %}✅
+                    {% elif '✗' in req.status %}❌
+                    {% else %}⚠️
+                    {% endif %}
+                </span>
+                <div>
+                    <strong>{{ req.type }}:</strong> {{ req.requirement }}<br>
+                    <small style="color: #718096;">{{ req.detail }}</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% if recommendation.missing_items %}
+        <div style="margin-top: 1.5rem; padding: 1rem; background: #fff5f5; border-radius: 5px;">
+            <h5 style="color: #e53e3e; margin-bottom: 0.5rem;">⚠️ 不足している要件</h5>
+            <ul style="margin-left: 1.5rem;">
+                {% for item in recommendation.missing_items %}
+                <li>{{ item.requirement }}</li>
+                {% if item.alternative %}
+                <small style="color: #718096;">代替条件: {{ item.alternative }}</small>
+                {% endif %}
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        {% if recommendation.required_documents %}
+        <div style="margin-top: 1.5rem;">
+            <h5 style="margin-bottom: 0.75rem; color: #2d3748;">📄 必要書類</h5>
+            <ul class="document-list">
+                {% for doc in recommendation.required_documents %}
+                <li>
+                    <strong>{{ doc.name }}</strong>
+                    {% if doc.description %}<br><small style="color: #718096;">{{ doc.description }}</small>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+{% if result.next_steps %}
+<div class="next-steps">
+    <h3 style="color: #ed8936; margin-bottom: 1rem;">📋 次のステップ</h3>
+    <ol style="margin-left: 1.5rem; line-height: 2;">
+        {% for step in result.next_steps %}
+        <li>{{ step }}</li>
+        {% endfor %}
+    </ol>
+</div>
+{% endif %}
+
+{% if result.ai_analysis and result.ai_analysis.enabled %}
+<div class="card" style="background: linear-gradient(to right, #f0f9ff 0%, #e0f2fe 100%); border: 2px solid #0284c7;">
+    <h3 style="color: #0284c7; margin-bottom: 1.5rem;">🤖 AI詳細分析</h3>
+    
+    {% if result.ai_analysis.major_relevance %}
+    <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+        <h4 style="color: #2d3748; margin-bottom: 1rem;">📚 専攻と職種の関連性</h4>
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <div style="font-size: 2rem; font-weight: bold; color: {% if result.ai_analysis.major_relevance.score >= 70 %}#48bb78{% elif result.ai_analysis.major_relevance.score >= 50 %}#ed8936{% else %}#e53e3e{% endif %}">
+                {{ result.ai_analysis.major_relevance.score }}点
+            </div>
+            <div>
+                <div style="font-weight: 600; font-size: 1.1rem;">{{ result.ai_analysis.major_relevance.level }}</div>
+                <div style="color: #718096;">関連性レベル</div>
+            </div>
+        </div>
+        <p style="margin-bottom: 0.5rem;"><strong>分析:</strong> {{ result.ai_analysis.major_relevance.reason }}</p>
+        <p style="color: #0284c7;"><strong>💡 アドバイス:</strong> {{ result.ai_analysis.major_relevance.recommendation }}</p>
+    </div>
+    {% endif %}
+    
+    {% if result.ai_analysis.job_suitability %}
+    <div style="background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+        <h4 style="color: #2d3748; margin-bottom: 1rem;">💼 業務内容の分析</h4>
+        <div style="margin-bottom: 1rem;">
+            <span style="font-weight: 600;">専門性スコア:</span>
+            <span style="font-size: 1.3rem; font-weight: bold; color: {% if result.ai_analysis.job_suitability.professional_score >= 70 %}#48bb78{% elif result.ai_analysis.job_suitability.professional_score >= 50 %}#ed8936{% else %}#e53e3e{% endif %}">
+                {{ result.ai_analysis.job_suitability.professional_score }}点
+            </span>
+        </div>
+        
+        {% if result.ai_analysis.job_suitability.strengths %}
+        <div style="margin-bottom: 1rem;">
+            <strong style="color: #48bb78;">✅ 強み:</strong>
+            <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                {% for strength in result.ai_analysis.job_suitability.strengths %}
+                <li>{{ strength }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        {% if result.ai_analysis.job_suitability.concerns %}
+        <div style="margin-bottom: 1rem;">
+            <strong style="color: #ed8936;">⚠️ 懸念点:</strong>
+            <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                {% for concern in result.ai_analysis.job_suitability.concerns %}
+                <li>{{ concern }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        {% if result.ai_analysis.job_suitability.recommendations %}
+        <div>
+            <strong style="color: #0284c7;">💡 改善提案:</strong>
+            <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                {% for rec in result.ai_analysis.job_suitability.recommendations %}
+                <li>{{ rec }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    {% if result.ai_analysis.improvement_suggestions %}
+    <div style="background: white; padding: 1.5rem; border-radius: 8px;">
+        <h4 style="color: #2d3748; margin-bottom: 1rem;">🎯 総合改善提案</h4>
+        <div style="white-space: pre-line; line-height: 1.8;">{{ result.ai_analysis.improvement_suggestions }}</div>
+    </div>
+    {% endif %}
+</div>
+{% elif result.ai_analysis %}
+<div class="card" style="background: #f8f9fa; border: 2px dashed #cbd5e0;">
+    <h3 style="color: #718096; margin-bottom: 1rem;">🤖 AI分析機能</h3>
+    <p style="color: #718096;">{{ result.ai_analysis.message }}</p>
+    <p style="margin-top: 1rem; color: #718096;">
+        <small>AI機能を有効にすると、専攻と職種の関連性や業務内容の詳細分析が利用できます。</small>
+    </p>
+</div>
+{% endif %}
+
+<div style="text-align: center; margin-top: 2rem;">
+    <a href="{% url 'visa_diagnosis:diagnosis_form' %}" class="btn">
+        🔄 新しい診断を開始
+    </a>
+    <a href="{% url 'visa_diagnosis:index' %}" class="btn btn-secondary" style="margin-left: 1rem;">
+        🏠 ホームに戻る
+    </a>
+</div>
+{% endblock %}

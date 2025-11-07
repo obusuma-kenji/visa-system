@@ -1,0 +1,22 @@
+{% extends 'visa_diagnosis/base.html' %}
+
+{% block title %}エラー{% endblock %}
+
+{% block content %}
+<div class="card" style="text-align: center;">
+    <div style="font-size: 4rem; margin-bottom: 1rem;">⚠️</div>
+    <h2 style="color: #e53e3e; margin-bottom: 1rem;">エラーが発生しました</h2>
+    <p style="font-size: 1.1rem; color: #718096; margin-bottom: 2rem;">
+        {{ error_message|default:"申し訳ございません。処理中にエラーが発生しました。" }}
+    </p>
+    
+    <div>
+        <a href="{% url 'visa_diagnosis:diagnosis_form' %}" class="btn">
+            🔄 診断フォームに戻る
+        </a>
+        <a href="{% url 'visa_diagnosis:index' %}" class="btn btn-secondary" style="margin-left: 1rem;">
+            🏠 ホームに戻る
+        </a>
+    </div>
+</div>
+{% endblock %}
